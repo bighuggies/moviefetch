@@ -1,53 +1,80 @@
-'''
-Created on 5/05/2012
+#!/usr/bin/env python
 
-@author: Andrew
-'''
-
-import requests
-import json
 import os
-import string
+import sys
 import re
+import shutil
+import json
+import logging
+import requests
 
-endwith = re.compile('.*[0-9]\)$')
+endwith = re.compile('.*[0-9]\)$')  # matches a string ending in [0-9])
+path = sys.argv[1]
 
 
-def listdir_fullpath(d):
-    return [os.path.join(d, f) for f in os.listdir(d)]
+def sanitise_title(title):
+    if '.' in title:
+        title = ' '.join(title.split('.')[:-1])
+
+    if '[' in title:
+        title = ' '.join(title.split('[')[:-1])
+
+    return title.strip()
 
 
-for directory in listdir_fullpath('D:\Videos\Movies'):
-    title = os.path.basename(directory)
-    path = os.path.dirname(directory)
-    print(title)
+def main():
+    for filename in os.listdir(path):
+        full_path = os.path.join(path, filename)
 
-    if not endwith.match(title):
-        r = requests.get('http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=xrwz8fmkszafbkgyzn2xbegz&q={title}&page_limit=3&page=1'.format(title=title))
-        t = json.loads(r.text)
+        title = sanitise_title(filename)
 
-        if t['total'] > 0:
-            for movie in t['movies']:
-                titleandyear = movie['title'] + ' (' + str(movie['year']) + ')'
-                titleandyear = string.replace(titleandyear, ': ', ' - ')
-                print(titleandyear)
+        if os.path.isfile(full_path):
+            newdir = os.path.join(path, title)
 
-                print('Is this a good folder name? (y/n): ')
-                yn = raw_input()
+            print("Moving {movie} into a directory.".format(movie=title))
+            log.write('Moving {title} from {source} to {dest}\n'.format(
+                title=title, source=full_path, dest=newdir))
+            os.mkdir(os.path.join(path, title))
+            shutil.move(full_path, newdir)
 
-                if yn == 'y':
-                    print('Renaming ' + '"' + directory + '"' + ' to ' + '"' + titleandyear + '"')
+            full_path = newdir
 
-                    try:
-                        os.rename(directory, os.path.join(path, titleandyear))
-                    except:
-                        print('Failed to rename, skipping.')
+        if not endwith.match(title):
+            print("Getting data for {title}".format(title=title))
+            r = requests.get('http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=xrwz8fmkszafbkgyzn2xbegz&q={title}&page_limit=3&page=1'.format(title=title))
+            t = json.loads(r.text)
+
+            if t['total'] > 0:
+                for movie in t['movies']:
+                    titleandyear = '{title} ({year})'.format(
+                        title=movie['title'], year=str(movie['year']))
+                    titleandyear = str.replace(titleandyear, ': ', ' - ')
+                    print(titleandyear)
+
+                    print('Is this a good folder name? (y/n): ')
+                    yn = input()
+
+                    if yn == 'y':
+                        print('Renaming {old} to {new}'.format(
+                            old=full_path, new=titleandyear))
+
+                        try:
+                            log.write('Renaming {old} to {new}'.format(
+                                old=full_path, new=titleandyear))
+                            os.rename(
+                                full_path, os.path.join(path, titleandyear))
+                        except:
+                            print('Skipping {movie} (failed to rename).'.format(movie=title))
+                            log.write('Renaming {old} to {new} failed'.format(
+                                old=full_path, new=titleandyear))
+                            break
+
                         break
-
-                    break
-                else:
-                    print('Bad name, skipping.')
+            else:
+                print('Skipping {movie} (no data found).'.format(movie=title))
         else:
-            print('No data found, skipping.')
-    else:
-        print('Movie already has year, skipping.')
+            print('Skipping {movie} (already has year).'.format(movie=title))
+
+if __name__ == '__main__':
+    logging.basicConfig(filename='moviefetch.log', level=logging.DEBUG)
+    main()
