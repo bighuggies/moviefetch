@@ -32,7 +32,7 @@ def main():
             newdir = os.path.join(path, title)
 
             print("Moving {movie} into a directory.".format(movie=title))
-            log.write('Moving {title} from {source} to {dest}\n'.format(
+            logging.info('Moving {title} from {source} to {dest}\n'.format(
                 title=title, source=full_path, dest=newdir))
             os.mkdir(os.path.join(path, title))
             shutil.move(full_path, newdir)
@@ -44,28 +44,26 @@ def main():
             r = requests.get('http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=xrwz8fmkszafbkgyzn2xbegz&q={title}&page_limit=3&page=1'.format(title=title))
             t = json.loads(r.text)
 
-            if t['total'] > 0:
+            if 'total' in t and t['total'] > 0:
                 for movie in t['movies']:
                     titleandyear = '{title} ({year})'.format(
                         title=movie['title'], year=str(movie['year']))
                     titleandyear = str.replace(titleandyear, ': ', ' - ')
-                    print(titleandyear)
 
-                    print('Is this a good folder name? (y/n): ')
-                    yn = input()
+                    print('Is {new} a good folder name? (y/n): '.format(new=titleandyear))
 
-                    if yn == 'y':
+                    if input() == 'y':
                         print('Renaming {old} to {new}'.format(
                             old=full_path, new=titleandyear))
 
                         try:
-                            log.write('Renaming {old} to {new}'.format(
+                            logging.info('Renaming {old} to {new}'.format(
                                 old=full_path, new=titleandyear))
                             os.rename(
                                 full_path, os.path.join(path, titleandyear))
                         except:
                             print('Skipping {movie} (failed to rename).'.format(movie=title))
-                            log.write('Renaming {old} to {new} failed'.format(
+                            logging.error('Renaming {old} to {new} failed'.format(
                                 old=full_path, new=titleandyear))
                             break
 
