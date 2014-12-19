@@ -16,22 +16,16 @@ def rename_movie(path, title, year):
         title=title, year=year)
     titleandyear = str.replace(titleandyear, ': ', ' - ')
 
-    if input('Is "{new}" a good folder name? (y/n): '.format(
-             new=titleandyear)).lower() == 'y':
+    if input('Is "{new}" a good folder name? (y/n): '.format(new=titleandyear)).lower() == 'y':
 
-        print('Renaming "{old}" to "{new}"'.format(
-            old=path, new=titleandyear))
+        print('Renaming "{old}" to "{new}"'.format(old=path, new=titleandyear))
 
         try:
-            logging.info('Renaming "{old}" to "{new}"'.format(
-                old=path, new=titleandyear))
-            os.rename(
-                path, os.path.join(path, titleandyear))
-        except:
-            print('Skipping "{movie}" (failed to rename).'.format(
-                movie=title))
-            logging.error('Renaming "{old}" to "{new}" failed'.format(
-                old=path, new=titleandyear))
+            logging.info('Renaming "{old}" to "{new}"'.format(old=path, new=titleandyear))
+            shutil.move(path, titleandyear)
+        except Exception as e:
+            print('Skipping "{movie}" (failed to rename: {error}).'.format(movie=title, error=e))
+            logging.error('Renaming "{old}" to "{new}" failed'.format(old=path, new=titleandyear))
 
         return True
 
@@ -39,6 +33,8 @@ def rename_movie(path, title, year):
 
 
 def tidy_movies(path):
+    os.chdir(path)
+
     for filename in os.listdir(path):
         # Full path is useful for manipulating directories
         full_path = os.path.join(path, filename)
@@ -65,9 +61,11 @@ def tidy_movies(path):
             # Change the full path to the new location
             full_path = new_path
 
-        # Get three likely title/dates by searching the title on rotten tomatoes
+        # Get three likely title/dates by searching the title on rotten
+        # tomatoes
         print('Getting data for "{movie}"'.format(movie=title))
-        data = json.loads(requests.get('http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=xrwz8fmkszafbkgyzn2xbegz&q={title}&page_limit=3&page=1'.format(title=title)).text)
+        data = json.loads(
+            requests.get('http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=xrwz8fmkszafbkgyzn2xbegz&q={title}&page_limit=10&page=1'.format(title=title)).text)
 
         if 'movies' in data and data['total'] > 0:
             for movie in data['movies']:

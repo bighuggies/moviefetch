@@ -1,4 +1,5 @@
-ENV
+*ENV
 *.pyc
+*.log
 .project
 .pydevproject
